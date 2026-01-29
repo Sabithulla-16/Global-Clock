@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Global Time Converter — Time, calendar & holidays by country">
+    <meta name="theme-color" content="#0d0d12">
+    <title>Global Time Converter</title>
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2300d4aa'/%3E%3Ccircle cx='16' cy='14' r='6' fill='none' stroke='%230d0d12' stroke-width='2'/%3E%3Cpath d='M16 2v4M16 22v4M8 8l2.8 2.8M21.2 21.2l2.8 2.8M2 16h4M22 16h4M8 24l2.8-2.8M21.2 10.8l2.8-2.8' stroke='%230d0d12' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2300d4aa'/%3E%3Ccircle cx='90' cy='80' r='35' fill='none' stroke='%230d0d12' stroke-width='8'/%3E%3Cpath d='M90 30v20M90 130v20M50 80h20M120 80h20M55 55l14 14M111 111l14 14M55 105l14-14M111 69l14-14' stroke='%230d0d12' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+    <!-- Manifest only when served over http(s) to avoid CORS with file:// -->
+    <script>
+      (function() {
+        var p = window.location.protocol;
+        if (p === 'http:' || p === 'https:') {
+          var l = document.createElement('link');
+          l.rel = 'manifest';
+          l.href = 'manifest.json';
+          document.head.appendChild(l);
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app-loading" class="app-loading" aria-hidden="false">
+        <div class="app-loading-content">
+            <div class="app-loading-spinner"></div>
+            <p class="app-loading-text">Loading...</p>
+        </div>
+    </div>
+    <div class="bg-gradient"></div>
+    <div class="container">
+        <header class="header">
+            <h1 class="header-title">Global Time</h1>
+            <p class="header-subtitle">Time, season & holidays by country</p>
+        </header>
+
+        <main class="main">
+            <section class="hero-card">
+                <div class="country-info">
+                    <span class="flag-emoji" id="flagEmoji" aria-hidden="true"></span>
+                    <h2 class="country-name" id="countryName">Select a country</h2>
+                </div>
+                <div class="time-block">
+                    <div class="time" id="currentTime" aria-live="polite">--:--:--</div>
+                    <div class="date" id="currentDate">--</div>
+                    <div class="meta">
+                        <span class="timezone" id="timezone">--</span>
+                        <span class="season" id="seasonValue">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="tabs">
+                    <button type="button" class="tab-btn active" data-tab="map">Map</button>
+                    <button type="button" class="tab-btn" data-tab="list">List</button>
+                    <button type="button" class="tab-btn" data-tab="calendar">Calendar</button>
+                </div>
+
+                <div class="tab-content active" id="mapTab">
+                    <div class="map-wrap">
+                        <div id="map"></div>
+                        <p class="map-hint">Tap a marker to see time & holidays</p>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="listTab">
+                    <input type="search" id="countrySearch" class="search-input" placeholder="Search country..." aria-label="Search countries">
+                    <div class="country-list" id="countryList" role="list"></div>
+                </div>
+
+                <div class="tab-content" id="calendarTab">
+                    <div class="calendar-toolbar">
+                        <button type="button" class="cal-nav" id="prevMonth" aria-label="Previous month">←</button>
+                        <h3 class="cal-title" id="calendarMonthYear"></h3>
+                        <button type="button" class="cal-nav" id="nextMonth" aria-label="Next month">→</button>
+                    </div>
+                    <div class="calendar-view-toggle">
+                        <button type="button" class="view-toggle-btn active" data-view="country">Country</button>
+                        <button type="button" class="view-toggle-btn" data-view="global">Global</button>
+                    </div>
+                    <p class="cal-hint" id="calendarHint">Holidays for selected country — same as time above</p>
+                    <div class="calendar-wrap">
+                        <div id="calendar-loading" class="calendar-loading" aria-hidden="true">
+                            <div class="calendar-loading-spinner"></div>
+                            <span>Loading holidays...</span>
+                        </div>
+                        <div class="calendar" id="calendar" role="grid"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Holidays by <a href="https://date.nager.at/API" target="_blank" rel="noopener">Nager.Date API</a></p>
+            <button type="button" id="installBtn" class="install-btn" style="display: none;">Install app</button>
+        </footer>
+    </div>
+
+    <div id="offline-banner" class="offline-banner" aria-hidden="true" role="status">You're offline — using cached data</div>
+    <div id="file-protocol-banner" class="file-protocol-banner" aria-hidden="true" role="status">
+        Calendar holidays need a local server. In this folder run: <code>npx serve .</code> then open <code>http://localhost:3000</code>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').style.display = 'inline-flex';
+        });
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('installBtn').style.display = 'none';
+            }
+        });
+        window.addEventListener('online', () => document.getElementById('offline-banner').setAttribute('aria-hidden', 'true'));
+        window.addEventListener('offline', () => { document.getElementById('offline-banner').setAttribute('aria-hidden', 'false'); });
+        if (window.location.protocol === 'file:') {
+            document.getElementById('file-protocol-banner').setAttribute('aria-hidden', 'false');
+        }
+    </script>
+</body>
+</html>
