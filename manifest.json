@@ -9,16 +9,16 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2300d4aa'/%3E%3Ccircle cx='96' cy='86' r='38' fill='none' stroke='%230d0d12' stroke-width='10'/%3E%3Cpath d='M96 38v24M96 130v24M52 86h24M116 86h24M58 58l17 17M117 117l17 17M58 114l17-17M117 75l17-17' stroke='%230d0d12' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E",
-      "sizes": "192x192",
+      "src": "icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%2300d4aa'/%3E%3Ccircle cx='256' cy='230' r='100' fill='none' stroke='%230d0d12' stroke-width='26'/%3E%3Cpath d='M256 130v50M256 330v52M136 230h50M330 230h52M156 156l35 35M321 321l35 35M156 304l35-35M321 139l35-35' stroke='%230d0d12' stroke-width='22' stroke-linecap='round'/%3E%3C/svg%3E",
+      "src": "icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
   "categories": ["utilities", "productivity", "travel"],

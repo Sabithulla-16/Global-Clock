@@ -204,25 +204,73 @@ function setupTabs() {
 }
 
 function setupMap() {
-    map = L.map('map').setView([20, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 18,
-    }).addTo(map);
-    countries.forEach(country => {
-        L.marker([country.lat, country.lng])
-            .addTo(map)
-            .bindPopup(`<b>${country.name}</b>`)
-            .on('click', () => selectCountry(country));
-    });
-    map.on('click', (e) => {
-        let nearest = null, minD = Infinity;
-        countries.forEach(c => {
-            const d = Math.sqrt(Math.pow(e.latlng.lat - c.lat, 2) + Math.pow(e.latlng.lng - c.lng, 2));
-            if (d < minD && d < 5) { minD = d; nearest = c; }
+    const mapWrap = document.getElementById('mapWrap');
+    const mapOffline = document.getElementById('mapOffline');
+    if (!navigator.onLine) {
+        if (mapWrap) mapWrap.classList.add('hidden');
+        if (mapOffline) {
+            mapOffline.classList.remove('hidden');
+            fillMapOfflineList();
+        }
+        return;
+    }
+    try {
+        map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OSM',
+            maxZoom: 18,
+        }).addTo(map);
+        countries.forEach(country => {
+            L.marker([country.lat, country.lng])
+                .addTo(map)
+                .bindPopup(`<b>${country.name}</b>`)
+                .on('click', () => selectCountry(country));
         });
-        if (nearest) selectCountry(nearest);
+        map.on('click', (e) => {
+            let nearest = null, minD = Infinity;
+            countries.forEach(c => {
+                const d = Math.sqrt(Math.pow(e.latlng.lat - c.lat, 2) + Math.pow(e.latlng.lng - c.lng, 2));
+                if (d < minD && d < 5) { minD = d; nearest = c; }
+            });
+            if (nearest) selectCountry(nearest);
+        });
+    } catch (err) {
+        if (mapWrap) mapWrap.classList.add('hidden');
+        if (mapOffline) mapOffline.classList.remove('hidden');
+    }
+}
+
+function fillMapOfflineList() {
+    const list = document.getElementById('mapOfflineList');
+    if (!list) return;
+    list.innerHTML = '';
+    countries.forEach(country => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'map-offline-country-btn';
+        btn.textContent = country.name;
+        btn.addEventListener('click', () => selectCountry(country));
+        list.appendChild(btn);
     });
+}
+
+function updateMapOfflineState() {
+    const mapWrap = document.getElementById('mapWrap');
+    const mapOffline = document.getElementById('mapOffline');
+    if (!mapWrap || !mapOffline) return;
+    if (navigator.onLine) {
+        mapOffline.classList.add('hidden');
+        if (!map) {
+            mapWrap.classList.remove('hidden');
+            setupMap();
+        } else {
+            mapWrap.classList.remove('hidden');
+        }
+    } else {
+        mapWrap.classList.add('hidden');
+        mapOffline.classList.remove('hidden');
+        fillMapOfflineList();
+    }
 }
 
 function setupCountryList() {
@@ -359,24 +407,58 @@ function updateCalendarHint() {
     const hint = document.getElementById('calendarHint');
     if (!hint) return;
     if (calendarView === 'global') {
-        hint.textContent = 'Public holidays from all countries (Nager.Date API)';
+        hint.textContent = 'Public holidays from all countries';
         return;
     }
-    // Country view: use the same country as time checking
     if (currentCountry) {
         if (currentCountry.countryCode) {
-            hint.textContent = 'Holidays for ' + currentCountry.name + ' (Nager.Date API)';
+            hint.textContent = 'Holidays for ' + currentCountry.name + ' — tap a day with events to see names';
         } else {
-            hint.textContent = 'Holiday data not available for ' + currentCountry.name + ' — try Global or another country';
+            hint.textContent = 'Holiday data not available for ' + currentCountry.name + ' — try Global or pick another country';
         }
     } else {
         hint.textContent = 'Select a country (Map/List) or use Global to see holidays';
     }
 }
 
+function showFestivalModal(dateLabel, names) {
+    const existing = document.getElementById('festival-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'festival-modal';
+    modal.className = 'festival-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-label', 'Festivals on this day');
+    modal.innerHTML = `
+        <div class="festival-modal-backdrop"></div>
+        <div class="festival-modal-box">
+            <div class="festival-modal-header">
+                <h3>${dateLabel}</h3>
+                <button type="button" class="festival-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <ul class="festival-modal-list">${names.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add('festival-modal-visible'));
+    const close = () => {
+        modal.classList.remove('festival-modal-visible');
+        setTimeout(() => modal.remove(), 300);
+    };
+    modal.querySelector('.festival-modal-close').addEventListener('click', close);
+    modal.querySelector('.festival-modal-backdrop').addEventListener('click', close);
+}
+
+function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
 function renderCalendar() {
     const calendarEl = document.getElementById('calendar');
     const monthYearEl = document.getElementById('calendarMonthYear');
+    if (!calendarEl || !monthYearEl) return;
     updateCalendarHint();
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth();
@@ -398,6 +480,7 @@ function renderCalendar() {
         empty.className = 'calendar-day empty';
         calendarEl.appendChild(empty);
     }
+    const monthNamesShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for (let day = 1; day <= daysInMonth; day++) {
         const cell = document.createElement('div');
         cell.className = 'calendar-day';
@@ -410,9 +493,14 @@ function renderCalendar() {
         if (names.length > 0) {
             const label = document.createElement('div');
             label.className = 'calendar-day-festivals';
-            label.textContent = names.join(', ');
+            label.textContent = names.length === 1 ? names[0] : names.length + ' events';
             cell.appendChild(label);
             cell.classList.add('has-events');
+            const dateLabel = monthNamesShort[month] + ' ' + day + ', ' + year;
+            cell.addEventListener('click', () => showFestivalModal(dateLabel, names));
+            cell.setAttribute('role', 'button');
+            cell.setAttribute('tabindex', '0');
+            cell.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showFestivalModal(dateLabel, names); } });
         }
         calendarEl.appendChild(cell);
     }
@@ -425,5 +513,8 @@ window.addEventListener('resize', () => {
         document.getElementById('flagEmoji').textContent = isMobile ? currentCountry.flag : '';
     }
 });
+
+window.addEventListener('online', updateMapOfflineState);
+window.addEventListener('offline', updateMapOfflineState);
 
 document.addEventListener('DOMContentLoaded', init);
